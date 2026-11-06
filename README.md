@@ -6,11 +6,41 @@ A bilingual Windows desktop interface for Hama wavelet-transform EXAFS analysis,
 
 **Hama is external.** This repository and its releases do not contain Hama, its original Wgnuplot executable, its manual or model files. The MIT license covers this application's own code, not Hama or other third-party components.
 
-## Download v2.0.0
+## Follow the illustrated tutorial
 
-- **[Windows installer (recommended)](https://github.com/369di-cmyk/exafs-wavelet-studio/releases/download/v2.0.0/EXAFS_Wavelet_Studio_2.0.0_Setup.exe)**
-- [Windows portable ZIP](https://github.com/369di-cmyk/exafs-wavelet-studio/releases/download/v2.0.0/EXAFS_Wavelet_Studio_2.0.0_Windows.zip) · [Source ZIP](https://github.com/369di-cmyk/exafs-wavelet-studio/releases/download/v2.0.0/EXAFS_Wavelet_Studio_2.0.0_Source.zip)
-- [Release notes and all downloads](https://github.com/369di-cmyk/exafs-wavelet-studio/releases/tag/v2.0.0)
+**[Detailed English tutorial](docs/TUTORIAL.en.md)** · [中文图文教程](docs/TUTORIAL.zh-CN.md) · [Bugs / feature requests](https://github.com/369di-cmyk/exafs-wavelet-studio/issues)
+
+Step-by-step installation, Athena export, column and weight selection, parameters and Origin / Excel / PDF exports.
+
+![EXAFS Wavelet Studio](frontend/public/tutorial/studio-result.png)
+
+![Origin, Excel and PDF export](frontend/public/tutorial/studio-export.png)
+
+## 2.1.0 Illustrated tutorial and Athena import
+
+Open **Guide** for bilingual instructions with real Athena export screenshots, seven-column `.chik` mapping, input versus calculation weights, parameter starting values, timestamped video excerpts and troubleshooting. Click images to enlarge. Images are available offline; source links are at the end.
+
+In Athena, choose **File → Save current group as… → χ(k)**. Import `.chik` directly with k column 1, signal column 2, input weight 0 and a starting calculation weight of 2. For the video's k³χ route, use calculation weight 3. The Athena.kweight header does not mean column 2 is weighted. Do not import .prj or μ(E) as χ(k).
+
+The picker now includes `.chik` and `.xdi`. Includes the 2.0.2 setup reliability and 2.0.1 Origin orientation fixes. Download and tutorial links are below.
+
+Video: [一分钟速成Wavelet-transform](https://www.bilibili.com/video/BV1Xsy7YRETN/), on-screen credit 倩儿的天使师兄. Selected video images are excluded from MIT; see third-party notices.
+
+## 2.0.2 setup improvements (included)
+
+One-click setup verifies and reuses the cached engine, then checks completed Hama ZIP/EXE files in Downloads before connecting to ESRF. It makes up to three download attempts, displays progress, supports cancellation, and distinguishes timeout, DNS, TLS, HTTP denial and incomplete downloads.
+
+Browser fallback: **Official download → finish downloading → Detect download & import**. No extraction is needed. Use Import ZIP / EXE for files saved elsewhere. Once configured, the engine works offline. Local setup diagnostics are written to `last_download.json` in the application cache. Included in 2.1.0.
+
+## 2.0.1 coordinate correction (included)
+
+This source and the local patch fix transposed native Origin matrices in 2.0.0. Horizontal axis: k (Å⁻¹); vertical axis: uncorrected R (Å); matrix columns=k, rows=R. Re-export existing 2.0.0 `.opju` files with the patch; changing axis titles or rotating an image cannot repair data coordinates. Preview, image/PDF, Excel, TXT/CSV and Origin XYZ exports are unaffected. Included in 2.1.0.
+
+## Download v2.1.0
+
+- **[Windows installer (recommended)](https://github.com/369di-cmyk/exafs-wavelet-studio/releases/download/v2.1.0/EXAFS_Wavelet_Studio_2.1.0_Setup.exe)**
+- [Windows portable ZIP](https://github.com/369di-cmyk/exafs-wavelet-studio/releases/download/v2.1.0/EXAFS_Wavelet_Studio_2.1.0_Windows.zip) · [Source ZIP](https://github.com/369di-cmyk/exafs-wavelet-studio/releases/download/v2.1.0/EXAFS_Wavelet_Studio_2.1.0_Source.zip)
+- [Release notes and all downloads](https://github.com/369di-cmyk/exafs-wavelet-studio/releases/tag/v2.1.0)
 
 After installation, download or import Hama from the Hama engine tab. Native Origin project export requires a locally installed and activated Origin.
 
@@ -18,7 +48,7 @@ After installation, download or import Hama from the Hama engine tab. Native Ori
 
 1. Run the Windows installer, or extract the complete portable ZIP and open `EXAFS_Wavelet_Studio.exe`.
 2. Open **Hama engine → Download & configure**. Alternatively, import the official `hama_1.zip`, `hama_fortran.exe`, or its folder. The app verifies and copies the supported engine into your local application cache. No administrator account is required by the installer.
-3. Import TXT/DAT/CHI/CSV files containing **k (Å⁻¹) and χ(k)**, or load the clearly marked synthetic demo.
+3. Import CHIK/CHI/XDI/TXT/DAT/CSV files containing **k (Å⁻¹) and χ(k)**, or load the clearly marked synthetic demo.
 4. Check columns, existing input weighting and measured k bounds, then **Analyze**.
 5. Select **Export**, choose one or several formats and select a destination. Each export creates a new timestamped directory.
 
@@ -108,3 +138,13 @@ Fixtures are synthetic input and numerical reference data from a prior direct Ha
 ## Publishing this project
 
 Use the prepared source archive or the source allowlist in `scripts/package_release.py`. Do not publish the old v1 package, local engine cache, personal experimental data, `test_artifacts`, virtual environments, or unrelated projects. Third-party code retains its own licenses and notices. This is an independent interface project, not an official ESRF or OriginLab product.
+
+## Video credit, thanks and feedback
+
+Special thanks to Bilibili creator **倩儿的天使师兄** for sharing [一分钟速成Wavelet-transform ▏XAS同步辐射-小波变换处理EXAFS数据](https://www.bilibili.com/video/BV1Xsy7YRETN/). This guide includes selected frames with original attribution and timestamps. Watch the full explanation on the creator's original video page; click their name there to visit their profile, see more content and support their work.
+
+- [GitHub project](https://github.com/369di-cmyk/exafs-wavelet-studio)
+- [Browse existing issues](https://github.com/369di-cmyk/exafs-wavelet-studio/issues)
+- [Report a problem or request a feature](https://github.com/369di-cmyk/exafs-wavelet-studio/issues/new)
+
+The in-app Guide has separate Report a bug and Request a feature buttons with prefilled writing prompts. Include version, reproduction steps, error code and screenshots for bugs; describe the use case and desired outcome for features. Sign in to GitHub, review and submit yourself. Remove private paths and unpublished experimental data before sharing.

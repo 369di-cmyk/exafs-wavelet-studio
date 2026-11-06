@@ -104,15 +104,28 @@ def origin_project(results, target):
                 nr, nc = r.magnitude.shape
                 if not origin.Execute(f'win -a {matrix}; mdim cols:={nc} rows:={nr} x1:={r.grid_k[0]:.12g} x2:={r.grid_k[-1]:.12g} y1:={r.grid_r[0]:.12g} y2:={r.grid_r[-1]:.12g};'):
                     raise RuntimeError('Matrix coordinate mapping failed')
-                # COM PutMatrix consumes columns first. Check with a round-trip
-                # before saving, rather than guessing orientation.
-                if not origin.PutMatrix(matrix, r.magnitude.T.tolist()):
+                # pywin32 nested lists are rows, unlike the OriginExt example.
+                # Keep rows=R and columns=k, exactly as in the preview/Excel.
+                if not origin.PutMatrix(matrix, r.magnitude.tolist()):
                     raise RuntimeError('PutMatrix failed')
                 actual = np.asarray(origin.GetMatrix(matrix), dtype=float)
-                if actual.shape != r.magnitude.T.shape or not np.allclose(actual, r.magnitude.T, rtol=1e-12, atol=1e-12):
+                if actual.shape != r.magnitude.shape or not np.allclose(actual, r.magnitude, rtol=1e-12, atol=1e-12):
                     raise RuntimeError('Origin matrix round-trip differs from calculated values')
+                # Independently inspect Origin's dimensions, coordinate mapping
+                # and off-diagonal cells: Get/Put round-trip alone misses transpose bugs.
+                expected = (nr, nc, r.grid_k[0], r.grid_k[-1], r.grid_r[0], r.grid_r[-1])
+                properties = ('wks.nrows', 'wks.ncols', 'wks.col1.x1', 'wks.col1.x2', 'wks.col1.y1', 'wks.col1.y2')
+                if not np.allclose([origin.LTVar(p) for p in properties], expected, rtol=1e-10, atol=1e-10):
+                    raise RuntimeError('Origin matrix dimensions or k/R coordinates differ from preview')
+                peak = np.unravel_index(np.argmax(r.magnitude), r.magnitude.shape)
+                for row, col in {(0, nc - 1), (nr - 1, 0), peak}:
+                    origin.Execute(f'range wtcheck=[{matrix}]1!1; double wtcell=wtcheck[{row + 1},{col + 1}];')
+                    if not np.isclose(origin.LTVar('wtcell'), r.magnitude[row, col], rtol=1e-12, atol=1e-12):
+                        raise RuntimeError('Origin matrix cell orientation differs from preview')
                 if not origin.Execute(f'win -a {matrix}; plotm im:=[{matrix}]1!1 plot:=105 ogl:=<new template:=heatmap>; label -xb "k (1/Angstrom)"; label -yl "R (Angstrom), uncorrected";'):
                     raise RuntimeError('Origin heatmap creation failed')
+                # Match preview limits instead of the template's half-cell padding.
+                origin.Execute(f'layer.x.from={r.grid_k[0]:.12g}; layer.x.to={r.grid_k[-1]:.12g}; layer.y.from={r.grid_r[0]:.12g}; layer.y.to={r.grid_r[-1]:.12g};')
             output = job / 'Wavelet.opju'
             if not origin.Save(str(output)) or not output.is_file() or output.stat().st_size < 100:
                 raise RuntimeError('Origin did not save an OPJU project')

@@ -14,7 +14,7 @@ import threading
 import time
 import numpy as np
 
-VERSION = '2.0.0'
+VERSION = '2.1.0'
 
 
 class DataError(ValueError):

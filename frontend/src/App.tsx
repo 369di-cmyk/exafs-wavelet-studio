@@ -1,3 +1,4 @@
+import { TutorialGuide } from "@/TutorialGuide"
 import { useCallback, useEffect, useRef, useState } from "react"
 import {
   Activity,
@@ -100,6 +101,7 @@ type State = {
   elapsed: number
   errors: Issue[]
   export: { folder: string; completed: string[]; errors: Issue[] } | null
+  download?: { stage: string; attempt?: number; attempts?: number; received?: number; total?: number } | null
   inputs: { name: string; path: string; rows: number; cols: number }[]
   results: { name: string; metadata: Record<string, unknown> }[]
 }
@@ -447,7 +449,7 @@ export default function App() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Badge variant="outline">v{state?.version || "2.0.0"}</Badge>
+            <Badge variant="outline">v{state?.version || "2.1.0"}</Badge>
             <Languages className="size-4 text-muted-foreground" />
             <ToggleGroup
               type="single"
@@ -752,8 +754,8 @@ export default function App() {
                     </CardTitle>
                     <CardDescription>
                       {t(
-                        "TXT / DAT / CHI / CSV · 支持中文路径与多文件",
-                        "TXT / DAT / CHI / CSV · Unicode paths & multiple files"
+                        "CHIK / CHI / XDI / TXT / DAT / CSV · 支持中文路径与多文件",
+                        "CHIK / CHI / XDI / TXT / DAT / CSV · Unicode paths & multiple files"
                       )}
                     </CardDescription>
                     <CardAction>
@@ -1035,16 +1037,45 @@ export default function App() {
                     onClick={() => void act("install_hama")}
                   >
                     <Download data-icon="inline-start" />
-                    {t("一键下载并配置", "Download & configure")}
+                    {state?.engine.ready ? t("检查已配置的 Hama", "Check configured Hama") : t("一键配置 Hama", "Set up Hama")}
                   </Button>
                   <p className="text-sm text-muted-foreground">
                     {t(
-                      "自动下载 → 校验版本 → 配置本机缓存。无需手动解压或输入命令；如官网限制自动下载，可用下方导入。",
-                      "Download → verify → configure local cache. No manual extraction or commands. If the website blocks automatic downloads, use import below."
+                      "先复用已校验的引擎，再检测下载文件夹；需要时从官网下载，失败自动重试（最多 3 次）。无需解压，也不用重复下载。",
+                      "Reuse a verified engine or detect it in Downloads first. Otherwise download from ESRF with up to 3 attempts. No extraction or repeated download needed."
                     )}
                   </p>
+                  {state?.download && (
+                    <Alert aria-live="polite">
+                      <Info />
+                      <AlertTitle>{t("Hama 配置进度", "Hama setup progress")}</AlertTitle>
+                      <AlertDescription>
+                        <p>{({
+                          checking: t("正在检查本机缓存和下载文件夹…", "Checking cache and Downloads…"),
+                          cached: t("已通过校验，直接使用本机引擎，无需联网。", "Verified cached engine reused; no network needed."),
+                          imported: t("已找到下载文件并导入，配置完成。", "Downloaded file found and imported. Setup complete."),
+                          connecting: t("正在连接 ESRF 官网…", "Connecting to ESRF…"),
+                          receiving: t("正在下载…", "Downloading…"),
+                          retry: t("上次连接未完成，正在自动重试…", "Previous attempt failed; retrying…"),
+                          attempt_failed: t("本次下载失败，正在检查下一步…", "Attempt failed; checking next step…"),
+                          local_rejected: t("本机文件未通过校验，继续检查…", "Local file not verified; continuing…"),
+                          verifying: t("下载完成，正在校验文件…", "Download complete; verifying…"),
+                          complete: t("下载和校验完成，Hama 已就绪。", "Downloaded and verified. Hama is ready."),
+                          failed: t("本次配置未完成，请查看下方具体原因和解决方法。", "Setup did not complete. See the error and corrective steps below."),
+                        } as Record<string, string>)[state.download.stage]}</p>
+                        {state.download.attempt && <p>{t("尝试", "Attempt")} {state.download.attempt} / {state.download.attempts}</p>}
+                        {state.download.received !== undefined && <p>{Math.round(state.download.received / 1024)} KB{state.download.total ? ` / ${Math.round(state.download.total / 1024)} KB` : ""}</p>}
+                        {state.download.stage === "receiving" && !!state.download.total && <Progress value={Math.min(100, (state.download.received || 0) * 100 / state.download.total)} />}
+                        {busy && state.phase === "installing" && <Button variant="outline" onClick={() => void call("cancel")}>{t("取消配置", "Cancel setup")}</Button>}
+                      </AlertDescription>
+                    </Alert>
+                  )}
                   <Separator />
                   <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" disabled={busy || !ready} onClick={() => void act("install_hama", true)}>
+                      <Download data-icon="inline-start" />
+                      {t("检测下载并导入", "Detect download & import")}
+                    </Button>
                     <Button
                       variant="outline"
                       disabled={busy || !ready}
@@ -1063,8 +1094,8 @@ export default function App() {
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {t(
-                      "选择 hama_1.zip 或 hama_fortran.exe。配置后不再依赖原位置。",
-                      "Select hama_1.zip or hama_fortran.exe. Afterwards, the original location is no longer required."
+                      "自动下载失败时：点下方官网下载链接 → 在浏览器完成下载 → 点“检测下载并导入”。如果另存到了其他文件夹，可手动选择 ZIP / EXE。",
+                      "If automatic download fails: open the official link below → finish the browser download → Detect download & import. For files saved elsewhere, choose ZIP / EXE manually."
                     )}
                   </p>
                   {state?.engine.ready && (
@@ -1206,6 +1237,7 @@ export default function App() {
             </div>
           </TabsContent>
           <TabsContent value="guide">
+            <TutorialGuide lang={lang} openLink={(kind) => void call("open_link", kind)} />
             <div className="grid gap-5 lg:grid-cols-2">
               <Card>
                 <CardHeader>

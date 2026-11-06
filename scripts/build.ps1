@@ -20,7 +20,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Desktop build failed.' }
 & $pythonExe "$PSScriptRoot\package_release.py"
 if ($LASTEXITCODE -ne 0) { throw 'Release packaging failed.' }
 $compiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
-& $compiler /nologo /target:winexe /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll /r:Microsoft.CSharp.dll "/win32icon:$projectRoot\app.ico" "/resource:$projectRoot\release\EXAFS_Wavelet_Studio_2.0.0_Windows.zip,payload.zip" "/out:$projectRoot\release\EXAFS_Wavelet_Studio_2.0.0_Setup.exe" "$projectRoot\installer.cs"
+& $compiler /nologo /target:winexe /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll /r:Microsoft.CSharp.dll "/win32icon:$projectRoot\app.ico" "/resource:$projectRoot\release\EXAFS_Wavelet_Studio_2.1.0_Windows.zip,payload.zip" "/out:$projectRoot\release\EXAFS_Wavelet_Studio_2.1.0_Setup.exe" "$projectRoot\installer.cs"
 if ($LASTEXITCODE -ne 0) { throw 'Installer build failed.' }
 & $pythonExe "$PSScriptRoot\check_release.py" --source "$projectRoot\release\GitHub_Source"
 if ($LASTEXITCODE -ne 0) { throw 'Source release validation failed.' }

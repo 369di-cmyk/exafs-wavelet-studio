@@ -10,7 +10,7 @@ SOURCE = RELEASE / 'GitHub_Source'
 TOP = ['app.py', 'core.py', 'engine_manager.py', 'exports.py', 'issues.py', 'plot_bridge.cs', 'installer.cs', 'app.ico',
        'LICENSE', 'README.md', 'README.zh-CN.md', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_LICENSES.txt',
        'TEST_REPORT.md', 'requirements.txt', 'requirements-dev.txt', '.gitignore']
-TREE = ['frontend/src', 'fixtures', 'scripts', 'tests', '.github', 'third_party']
+TREE = ['docs', 'frontend/public', 'frontend/src', 'fixtures', 'scripts', 'tests', '.github', 'third_party']
 FRONT = ['package.json', 'package-lock.json', 'components.json', 'index.html', 'vite.config.ts', 'tsconfig.json',
          'tsconfig.app.json', 'tsconfig.node.json', 'eslint.config.js', '.gitignore', '.prettierrc', '.prettierignore']
 
@@ -37,7 +37,7 @@ def main():
     for item in TREE:
         shutil.copytree(ROOT / item, SOURCE / item, ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
     check(SOURCE)
-    archive(SOURCE, RELEASE / 'EXAFS_Wavelet_Studio_2.0.0_Source.zip')
+    archive(SOURCE, RELEASE / 'EXAFS_Wavelet_Studio_2.1.0_Source.zip')
     binary = ROOT / 'dist' / 'EXAFS_Wavelet_Studio'
     if not (binary / 'EXAFS_Wavelet_Studio.exe').is_file():
         raise RuntimeError('Build the desktop executable first')
@@ -45,7 +45,7 @@ def main():
         shutil.copy2(ROOT / item, binary / item)
     shutil.copytree(ROOT / 'third_party', binary / 'third_party', dirs_exist_ok=True)
     check(binary)
-    archive(binary, RELEASE / 'EXAFS_Wavelet_Studio_2.0.0_Windows.zip')
+    archive(binary, RELEASE / 'EXAFS_Wavelet_Studio_2.1.0_Windows.zip')
     print('Created source and portable archives; no Hama engine is included.')
 
 

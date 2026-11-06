@@ -9,6 +9,7 @@ from pathlib import Path
 import threading
 import time
 import webbrowser
+from urllib.parse import urlencode
 import numpy as np
 import webview
 from core import DataError, Settings, VERSION, calculate, make_demo, prepare, read_table, resources
@@ -48,7 +49,7 @@ class DesktopApi:
         with self._lock:
             self._idle()
             self._cancel.clear()
-            self._state.update(busy=True, phase=phase, done=0, total=1, current='', errors=[], started=time.monotonic())
+            self._state.update(busy=True, phase=phase, done=0, total=1, current='', errors=[], download=None, started=time.monotonic())
             if phase == 'exporting':
                 self._state['export'] = None
         def run():
@@ -106,7 +107,7 @@ class DesktopApi:
     def choose_data(self):
         self._idle()
         paths = self._window.create_file_dialog(webview.FileDialog.OPEN, allow_multiple=True,
-                 file_types=('EXAFS text (*.txt;*.dat;*.chi;*.csv;*.xmu)', 'All files (*.*)'))
+                 file_types=('EXAFS text (*.chik;*.chi;*.xdi;*.txt;*.dat;*.csv)', 'All files (*.*)'))
         return self._load(paths) if paths else None
 
     @safe
@@ -138,8 +139,11 @@ class DesktopApi:
         return {'kmin': lower, 'kmax': upper}
 
     @safe
-    def install_hama(self):
-        return self._job('installing', download_engine)
+    def install_hama(self, local_only=False):
+        def progress(event):
+            with self._lock:
+                self._state['download'] = event
+        return self._job('installing', lambda: download_engine(progress, self._cancel, bool(local_only)))
 
     @safe
     def choose_hama(self, folder=False):
@@ -174,7 +178,18 @@ class DesktopApi:
 
     @safe
     def open_link(self, kind):
-        links = {'home': HOME, 'download': DOWNLOAD, 'webview': 'https://developer.microsoft.com/microsoft-edge/webview2/'}
+        repository = 'https://github.com/369di-cmyk/exafs-wavelet-studio'
+        links = {'home': HOME, 'download': DOWNLOAD, 'webview': 'https://developer.microsoft.com/microsoft-edge/webview2/',
+                 'tutorial_video': 'https://www.bilibili.com/video/BV1Xsy7YRETN/',
+                 'project': repository, 'issues': repository + '/issues',
+                 'report_bug': repository + '/issues/new?' + urlencode({
+                     'title': '[问题反馈 / Bug] ',
+                     'body': f'## 软件版本 / App version\n{VERSION}\n\n## Windows / Origin 版本\n\n## 操作步骤 / Steps to reproduce\n1. \n\n## 预期结果 / Expected result\n\n## 实际结果与错误编号 / Actual result and error code\n\n## 截图或最小示例 / Screenshot or minimal example\n分享前请移除私人路径和未公开实验数据。\nRemove private paths and unpublished experimental data before sharing.\n'}),
+                 'request_feature': repository + '/issues/new?' + urlencode({
+                     'title': '[功能建议 / Feature] ',
+                     'body': '## 使用场景 / Use case\n\n## 希望增加的功能 / Requested feature\n\n## 当前做法与不便 / Current workflow and difficulty\n\n## 希望的输入输出或示例 / Desired inputs, outputs or example\n'}),
+                 'athena_docs': 'https://bruceravel.github.io/demeter/documents/Athena/output/column.html',
+                 'tutorial_article': 'https://www.huasuankeji.com/news/?p=349505'}
         if kind in links:
             webbrowser.open(links[kind])
 
@@ -234,7 +249,7 @@ class DesktopApi:
 
     @safe
     def cancel(self):
-        if self._state['phase'] == 'calculating':
+        if self._state['phase'] in ('calculating', 'installing'):
             self._cancel.set()
 
     @safe
@@ -290,7 +305,7 @@ class DesktopApi:
 
     def _closing(self):
         if self._state['busy']:
-            if self._state['phase'] == 'calculating':
+            if self._state['phase'] in ('calculating', 'installing'):
                 self._cancel.set()
             # Do not abandon a save or COM instance. The UI displays the task
             # status; close again when it has finished (or cancelled).

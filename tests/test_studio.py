@@ -53,6 +53,21 @@ class ValidationTests(unittest.TestCase):
         self.assertEqual(actual.skipped_headers, 1)
         self.assertEqual(actual.source_sha256, hashlib.sha256(path.read_bytes()).hexdigest())
 
+    def test_native_data_picker_filter_accepts_athena_chik(self):
+        from app import DesktopApi
+        from webview.util import parse_file_type
+        api = DesktopApi()
+        seen = []
+        class Window:
+            def create_file_dialog(self, *args, **kwargs):
+                for file_type in kwargs['file_types']:
+                    seen.append(parse_file_type(file_type)[1])
+                return None
+        api._window = Window()
+        response = api.choose_data()
+        self.assertTrue(response['ok'], response)
+        self.assertIn('*.chik', seen[0].split(';'))
+
     def test_missing_cell_reports_physical_line(self):
         path = self.folder / 'bad.csv'
         path.write_text('k,chi\n2,0.1\n2.1,\n', encoding='utf-8')
@@ -70,6 +85,23 @@ class ValidationTests(unittest.TestCase):
         k, chi, resampled = prepare(weighted, Settings(input_weight=2))
         np.testing.assert_allclose(chi, np.sin(k))
         self.assertFalse(resampled)
+
+    def test_athena_chik_seven_columns_ignore_plot_weight_header(self):
+        # Athena 0.9.26 GUI export layout; synthetic signal, no experimental data.
+        k = np.arange(0, 12.001, .05)
+        chi = np.sin(k)
+        values = np.column_stack((k, chi, k*chi, k*k*chi, k**3*chi,
+                                  np.ones_like(k), 7112 + 3.81*k*k))
+        path = self.folder / '标准样品.chik'
+        np.savetxt(path, values, header='XDI/1.0 Athena/0.9.26\nColumn.1: k inverse Angstrom\nColumn.2: chi\nAthena.kweight: 2\nk chi chik chik2 chik3 win energy')
+        original = path.read_bytes()
+        table = read_table(path)
+        self.assertEqual(table.values.shape, (241, 7))
+        for power in range(4):
+            selected_k, selected_chi, changed = prepare(table, Settings(chi_col=power+1, input_weight=power))
+            np.testing.assert_allclose(selected_chi, np.sin(selected_k), atol=1e-14)
+            self.assertFalse(changed)
+        self.assertEqual(path.read_bytes(), original)
 
     def test_no_extrapolation(self):
         self.assertCode('outside', prepare, self.table, Settings(kmin=1))
@@ -157,7 +189,7 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(cm.exception.key, 'engine_archive')
 
     def test_network_error_is_actionable(self):
-        with patch('urllib.request.urlopen', side_effect=OSError('network disconnected')):
+        with patch('engine_manager.download_candidates', return_value=[]), patch('urllib.request.OpenerDirector.open', side_effect=OSError('network disconnected')), patch('engine_manager.time.sleep'):
             with self.assertRaises(DataError) as cm:
                 engines.download_engine()
         self.assertEqual(cm.exception.key, 'download')
@@ -287,8 +319,8 @@ class HamaIntegrationTests(unittest.TestCase):
             origin = win32com.client.DispatchEx('Origin.Application')
             try:
                 self.assertTrue(origin.Load(str(folder / 'Wavelet.opju')))
-                np.testing.assert_allclose(np.asarray(origin.GetMatrix('WT1')).T, a.magnitude, rtol=1e-12)
-                np.testing.assert_allclose(np.asarray(origin.GetMatrix('WT2')).T, b.magnitude, rtol=1e-12)
+                np.testing.assert_allclose(np.asarray(origin.GetMatrix('WT1')), a.magnitude, rtol=1e-12)
+                np.testing.assert_allclose(np.asarray(origin.GetMatrix('WT2')), b.magnitude, rtol=1e-12)
                 self.assertGreaterEqual(origin.GraphPages.Count, 2)
             finally:
                 origin.Exit()

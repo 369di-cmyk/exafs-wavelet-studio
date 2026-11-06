@@ -38,3 +38,16 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+
+## Tutorial screenshots / 教程截图
+
+`frontend/public/tutorial/video-52.png`, `video-98.png`, `video-350.png`, and `video-415.png` are selected stills from the user-supplied local copy of 《一分钟速成Wavelet-transform ▏XAS同步辐射-小波变换处理EXAFS数据》, https://www.bilibili.com/video/BV1Xsy7YRETN/ . On-screen attribution: 倩儿的天使师兄. Timestamps: 00:52, 01:38, 05:50, 06:55. Original credits are retained; these excerpts illustrate and discuss specific software operations. Rights remain with their original owners; these images are **excluded from the MIT license**. No full video is distributed.
+
+`athena-menu.png` is a local screenshot of Athena 0.9.26 using its bundled Fe foil example. Athena interface and third-party marks remain with their owners. No user experimental data or Athena project is bundled.
+
+视频截图不属于本软件自有代码，不适用 MIT；完整视频不随软件分发。教程文字为重新撰写，区分视频演示、官方文档和本机实测。
+
+`studio-result.png` and `studio-export.png` are locally captured app screenshots showing the bundled Fe foil standard workflow. They contain no user experimental dataset.
+
+Special thanks / 特别感谢 Bilibili UP 主 倩儿的天使师兄 for the tutorial. Watch the full original video at https://www.bilibili.com/video/BV1Xsy7YRETN/ ; the creator profile is accessible by clicking their name on the video page.

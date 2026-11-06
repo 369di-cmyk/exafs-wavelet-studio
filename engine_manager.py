@@ -8,6 +8,12 @@ import json
 import os
 from pathlib import Path
 import tempfile
+import time
+import socket
+import ssl
+import http.client
+import urllib.error
+import urllib.parse
 import urllib.request
 import zipfile
 
@@ -95,20 +101,151 @@ def import_engine(path):
     return install_bytes(path.read_bytes(), path.suffix.lower() == '.zip')
 
 
-def download_engine():
+def _official_url(url):
+    u = urllib.parse.urlsplit(url)
+    return u.scheme == 'https' and u.hostname == 'www.esrf.fr' and u.port in (None, 443) and not u.username and not u.password
+
+
+class OfficialRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not _official_url(newurl):
+            raise DataError('download_redirect', newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def download_candidates():
+    """Only named Hama files in the user's download folder, never a disk scan."""
+    folder = Path.home() / 'Downloads'
+    if os.name == 'nt':
+        try:
+            import winreg
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders') as key:
+                folder = Path(os.path.expandvars(winreg.QueryValueEx(key, '{374DE290-123F-4565-9164-39C4925E467B}')[0]))
+        except OSError:
+            pass
     try:
-        # ESRF's CDN rejects some custom client user agents with HTTP 403.
-        # This standard download-client header was verified with the official ZIP.
-        request = urllib.request.Request(DOWNLOAD, headers={'User-Agent': 'curl/8.13.0'})
-        with urllib.request.urlopen(request, timeout=35) as response:
-            if not response.url.startswith('https://www.esrf.fr/'):
-                raise DataError('download', 'Unexpected redirect outside www.esrf.fr')
-            blob = response.read(LIMIT + 1)
-        return install_bytes(blob, zipped=True)
-    except DataError:
+        files = [p for p in folder.iterdir() if p.is_file() and p.name.lower().startswith('hama')
+                 and p.suffix.lower() in ('.zip', '.exe') and p.stat().st_size <= LIMIT]
+        return sorted(files, key=lambda p: p.stat().st_mtime, reverse=True)[:20]
+    except OSError:
+        return []
+
+
+def _cancelled(cancel):
+    if cancel is not None and cancel.is_set():
+        raise DataError('download_cancelled')
+
+
+def _download_error(exc):
+    if isinstance(exc, DataError):
+        return exc
+    if isinstance(exc, urllib.error.HTTPError):
+        key = 'download_proxy' if exc.code == 407 else 'download_blocked' if exc.code in (403, 429) else 'download_http'
+    else:
+        reason = getattr(exc, 'reason', exc)
+        key = ('download_tls' if isinstance(reason, ssl.SSLError) else
+               'download_timeout' if isinstance(reason, (TimeoutError, socket.timeout)) else
+               'download_dns' if isinstance(reason, socket.gaierror) else
+               'download_incomplete' if isinstance(reason, http.client.IncompleteRead) else 'download')
+    return DataError(key, str(exc))
+
+
+def download_engine(progress=None, cancel=None, local_only=False):
+    """Reuse verified files first, then bounded retries from official HTTPS only."""
+    events = []
+    def update(stage, **values):
+        event = dict(stage=stage, **values)
+        # Keep the diagnostic file small; byte-level updates belong only in UI.
+        if stage != 'receiving':
+            events.append(event)
+        if progress:
+            progress(event)
+    def record():
+        try:
+            (app_data() / 'last_download.json').write_text(json.dumps(events, ensure_ascii=False, indent=2), encoding='utf-8')
+        except OSError:
+            pass  # Diagnostics must not invalidate an otherwise successful install.
+    try:
+        _cancelled(cancel)
+        update('checking')
+        current = engine_status()
+        if current['ready']:
+            update('cached')
+            return current
+        for path in download_candidates():
+            _cancelled(cancel)
+            try:
+                result = import_engine(path)
+                update('imported', path=str(path))
+                return result
+            except (DataError, OSError) as e:
+                update('local_rejected', path=str(path), detail=str(e))
+        if local_only:
+            raise DataError('download_local_missing', '\n'.join(e.get('detail', '') for e in events if e['stage'] == 'local_rejected'))
+        opener = urllib.request.build_opener(OfficialRedirect())
+        errors = []
+        # Both URLs are the official download, with/without the CMS query flag.
+        urls = (DOWNLOAD.split('?')[0], DOWNLOAD, DOWNLOAD.split('?')[0])
+        for attempt, url in enumerate(urls, 1):
+            _cancelled(cancel)
+            if attempt > 1:
+                update('retry', attempt=attempt, attempts=len(urls), code=errors[-1].key)
+                if cancel is not None:
+                    if cancel.wait(attempt - 1):
+                        raise DataError('download_cancelled')
+                else:
+                    time.sleep(attempt - 1)
+            update('connecting', attempt=attempt, attempts=len(urls), url=url)
+            try:
+                request = urllib.request.Request(url, headers={'User-Agent': 'curl/8.13.0', 'Accept': 'application/zip,*/*', 'Accept-Encoding': 'identity'})
+                started = time.monotonic()
+                with opener.open(request, timeout=8) as response:
+                    if not _official_url(response.url):
+                        raise DataError('download_redirect', response.url)
+                    length = response.headers.get('Content-Length', '')
+                    total = int(length) if length.isdigit() else 0
+                    if total > LIMIT:
+                        raise DataError('download_limit', f'Content-Length={total}')
+                    if 'html' in response.headers.get('Content-Type', '').lower():
+                        raise DataError('download_html', 'Server returned HTML instead of ZIP')
+                    chunks, received = [], 0
+                    while True:
+                        _cancelled(cancel)
+                        if time.monotonic() - started > 25:
+                            raise DataError('download_timeout', 'Attempt exceeded 25 seconds')
+                        chunk = response.read1(64 * 1024)
+                        if not chunk:
+                            break
+                        chunks.append(chunk)
+                        received += len(chunk)
+                        if received > LIMIT:
+                            raise DataError('download_limit', 'Downloaded body exceeds 20 MB')
+                        update('receiving', attempt=attempt, attempts=len(urls), received=received, total=total)
+                    if total and total != received:
+                        raise DataError('download_incomplete', f'Expected {total} bytes; received {received}')
+                    blob = b''.join(chunks)
+                _cancelled(cancel)
+                if blob.lstrip()[:1] == b'<':
+                    raise DataError('download_html', 'Downloaded an HTML/XML error page')
+                update('verifying', received=len(blob))
+                result = install_bytes(blob, zipped=True)
+                update('complete', received=len(blob))
+                return result
+            except (DataError, OSError, ValueError, http.client.HTTPException) as exc:
+                error = _download_error(exc)
+                if error.key == 'download_cancelled':
+                    raise error
+                errors.append(error)
+                update('attempt_failed', attempt=attempt, code=error.key, detail=error.detail)
+                if error.key in ('engine_hash', 'download_redirect', 'download_limit', 'download_tls'):
+                    break
+        last = errors[-1]
+        raise DataError(last.key, '\n'.join(f'Attempt {i}: {e.key}: {e.detail}' for i, e in enumerate(errors, 1)))
+    except Exception as exc:
+        update('failed', code=getattr(exc, 'key', 'unexpected'), detail=str(exc))
         raise
-    except (OSError, ValueError) as e:
-        raise DataError('download', str(e)) from e
+    finally:
+        record()
 
 
 def short_path(path):

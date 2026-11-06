@@ -6,11 +6,41 @@
 
 **Hama 由用户独立获取。** 本仓库和安装包不含 Hama、原版 Wgnuplot、官方手册或模型文件。MIT 许可证适用于本软件自有代码，不把 Hama 或其他第三方组件重新授权为 MIT。
 
-## 下载 v2.0.0
+## 跟着图片操作
 
-- **[Windows 安装程序（推荐）](https://github.com/369di-cmyk/exafs-wavelet-studio/releases/download/v2.0.0/EXAFS_Wavelet_Studio_2.0.0_Setup.exe)**
-- [Windows 便携 ZIP](https://github.com/369di-cmyk/exafs-wavelet-studio/releases/download/v2.0.0/EXAFS_Wavelet_Studio_2.0.0_Windows.zip) · [源码 ZIP](https://github.com/369di-cmyk/exafs-wavelet-studio/releases/download/v2.0.0/EXAFS_Wavelet_Studio_2.0.0_Source.zip)
-- [版本说明与所有下载](https://github.com/369di-cmyk/exafs-wavelet-studio/releases/tag/v2.0.0)
+**[中文详细图文教程](docs/TUTORIAL.zh-CN.md)** · [English tutorial](docs/TUTORIAL.en.md) · [问题反馈 / 功能建议](https://github.com/369di-cmyk/exafs-wavelet-studio/issues)
+
+从安装、Athena 导出、列号和权重、参数选择到 Origin / Excel / PDF 导出，一步一步说明。
+
+![EXAFS Wavelet Studio](frontend/public/tutorial/studio-result.png)
+
+![Origin, Excel and PDF export](frontend/public/tutorial/studio-export.png)
+
+## 2.1.0 图文教程与 Athena 导入
+
+打开软件顶部 **说明 / Guide**，即可查看中英文图文教程：Athena 导出菜单、实际 .chik 七列格式、两个权重的区别、参数初始值与调整方法、视频截图时间点和常见报错处理。图片可点击放大，离线可看。原视频与官方文档入口在教程末尾。
+
+推荐从 Athena 的 **File → Save current group as… → χ(k)** 导出 `.chik`，直接导入。第1列 k、第2列 χ，输入权重0，计算权重通常从2开始；对照视频 k³χ 路线时计算权重改3。不要把 Athena.kweight 文件头误认为第2列已有权重。不要直接导入 .prj 或 μ(E)。
+
+修复了文件选择框遗漏 `.chik` 的问题，加入 `.xdi` 文本筛选；保留2.0.2下载重试/缓存/下载文件夹检测及2.0.1 Origin方向修复。下载与教程入口见下方。
+
+视频来源：[一分钟速成Wavelet-transform](https://www.bilibili.com/video/BV1Xsy7YRETN/)，画面水印“倩儿的天使师兄”。节选截图不适用MIT；详见第三方说明。
+
+## 2.0.2 一键配置改进（已包含）
+
+“一键配置 Hama”会先校验并复用本机引擎，再检测下载文件夹中的已完成 Hama ZIP/EXE，最后才联网下载。官网连接失败时最多尝试 3 次，显示下载进度并支持取消。证书、域名解析、HTTP 拒绝、超时及不完整文件分别给出解决方法。
+
+若官网仍拒绝自动下载：点 **官网下载链接 → 浏览器下载完成 → 检测下载并导入**，不用解压或找程序文件。另存到其他位置时用“导入 ZIP / EXE”。成功配置后可离线使用。最近一次配置记录保存在本机缓存的 `last_download.json`。改进已包含在 2.1.0。
+
+## 2.0.1 坐标修正（已包含）
+
+本源码和本地修正版已修复 2.0.0 的 Origin 原生项目矩阵转置问题。统一横轴为 k（Å⁻¹）、纵轴为未相位校正的 R（Å），矩阵列=k、行=R。旧版 `.opju` 请用修正版重新导出；仅改轴标题或旋转图片不能修复数据坐标。预览、图片/PDF、Excel、TXT/CSV 和 Origin XYZ 不受该问题影响。修正已包含在 2.1.0。
+
+## 下载 v2.1.0
+
+- **[Windows 安装程序（推荐）](https://github.com/369di-cmyk/exafs-wavelet-studio/releases/download/v2.1.0/EXAFS_Wavelet_Studio_2.1.0_Setup.exe)**
+- [Windows 便携 ZIP](https://github.com/369di-cmyk/exafs-wavelet-studio/releases/download/v2.1.0/EXAFS_Wavelet_Studio_2.1.0_Windows.zip) · [源码 ZIP](https://github.com/369di-cmyk/exafs-wavelet-studio/releases/download/v2.1.0/EXAFS_Wavelet_Studio_2.1.0_Source.zip)
+- [版本说明与所有下载](https://github.com/369di-cmyk/exafs-wavelet-studio/releases/tag/v2.1.0)
 
 安装后在“ Hama 引擎”页一键下载或导入 Hama。原生 Origin 项目导出需要本机安装并激活 Origin。
 
@@ -18,7 +48,7 @@
 
 1. 双击安装程序安装，或完整解压便携 ZIP 后打开 `EXAFS_Wavelet_Studio.exe`。
 2. 在 **Hama 引擎 → 一键下载并配置** 中准备引擎。已有 `hama_1.zip`、`hama_fortran.exe` 或文件夹时，可直接导入。软件自动校验并存到本机缓存，以后不依赖原文件的位置。
-3. 导入包含 **k（Å⁻¹）和 χ(k)** 的 TXT/DAT/CHI/CSV，检查列号、输入已有 k 权重和分析范围，点击 **开始分析**。完成后点 **导出结果**，勾选需要的格式并选择保存文件夹。
+3. 导入包含 **k（Å⁻¹）和 χ(k)** 的 CHIK/CHI/XDI/TXT/DAT/CSV，检查列号、输入已有 k 权重和分析范围，点击 **开始分析**。完成后点 **导出结果**，勾选需要的格式并选择保存文件夹。
 
 也可先载入内置演示；演示为合成信号，**不是实验数据**。
 
@@ -98,3 +128,13 @@
 自有代码使用 [MIT 许可证](LICENSE)，第三方组件保留各自许可，见 [第三方说明](THIRD_PARTY_NOTICES.md)。发布时使用整理好的源码 ZIP 或 `scripts/package_release.py` 的明确白名单，不要把旧 v1 包、Hama 缓存、实验数据、虚拟环境、测试输出或其他项目直接上传。数值测试夹具为合成数据及参考结果，不含 Hama 程序代码。
 
 实际完成的测试和边界见 [TEST_REPORT.md](TEST_REPORT.md)，更新记录见 [CHANGELOG.md](CHANGELOG.md)。
+
+## 视频来源、致谢与反馈
+
+特别感谢哔哩哔哩 UP 主 **倩儿的天使师兄** 分享[《一分钟速成Wavelet-transform ▏XAS同步辐射-小波变换处理EXAFS数据》](https://www.bilibili.com/video/BV1Xsy7YRETN/)。本软件图文教程引用了部分画面，并保留原作者署名和时间点。想看完整讲解，请前往博主的原视频页面观看；也可在视频页点击 UP 主名字进入其主页，查看更多内容并支持原作者。
+
+- [本软件 GitHub 项目主页](https://github.com/369di-cmyk/exafs-wavelet-studio)
+- [查看已有反馈](https://github.com/369di-cmyk/exafs-wavelet-studio/issues)
+- [反馈问题或提出新功能建议](https://github.com/369di-cmyk/exafs-wavelet-studio/issues/new)
+
+软件“使用说明”页还提供“反馈问题”和“建议新功能”按钮，自动打开带填写提纲的页面。问题反馈请提供版本、重现步骤、错误编号和截图；功能建议请描述使用场景和希望的效果。登录 GitHub 后自行确认提交，分享前移除私人路径和未公开的实验数据。

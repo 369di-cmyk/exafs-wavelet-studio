@@ -15,7 +15,7 @@ class Installer : Form {
     ProgressBar progress = new ProgressBar();
     CheckBox shortcut = new CheckBox();
     bool installing = false;
-    string target = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "EXAFS Wavelet Studio 2.0.0");
+    string target = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "EXAFS Wavelet Studio 2.1.0");
 
     string T(string zh, string en) { return english ? en : zh; }
     void Texts() {
@@ -27,7 +27,7 @@ class Installer : Form {
         if (!installing) status.Text = target;
     }
     Installer() {
-        Text = "EXAFS Wavelet Studio 2.0.0 Setup";
+        Text = "EXAFS Wavelet Studio 2.1.0 Setup";
         ClientSize = new Size(620, 315); StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog; MaximizeBox = false;
         Font = new Font("Microsoft YaHei UI", 10);

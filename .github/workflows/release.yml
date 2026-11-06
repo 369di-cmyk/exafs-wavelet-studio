@@ -1,0 +1,70 @@
+name: Build and publish v2.1.0
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/RELEASE_v2.1.0.md
+      - .github/workflows/release.yml
+permissions:
+  contents: read
+concurrency:
+  group: release-v2.1.0
+  cancel-in-progress: false
+jobs:
+  release:
+    if: contains(github.event.head_commit.message, '[release v2.1.0]')
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install build dependencies
+        shell: pwsh
+        run: |
+          python -m venv .venv
+          ./.venv/Scripts/python.exe -m pip install -r requirements-dev.txt
+          if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed' }
+      - name: Test source
+        shell: pwsh
+        run: |
+          ./.venv/Scripts/python.exe -m unittest discover -s tests -v
+          if ($LASTEXITCODE -ne 0) { throw 'Tests failed' }
+      - name: Build and check packages
+        shell: pwsh
+        run: ./scripts/build.ps1
+      - name: Verify installer and checksums
+        shell: pwsh
+        run: |
+          $installPath = Join-Path $env:RUNNER_TEMP 'exafs-v210-verification'
+          $installer = Resolve-Path release/EXAFS_Wavelet_Studio_2.1.0_Setup.exe
+          $process = Start-Process -FilePath $installer -ArgumentList '--test-install', $installPath -WindowStyle Hidden -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'Installer extraction failed' }
+          $payload = (Resolve-Path dist/EXAFS_Wavelet_Studio).Path
+          foreach ($file in Get-ChildItem -LiteralPath $payload -Recurse -File) {
+            $relative = [IO.Path]::GetRelativePath($payload, $file.FullName)
+            $installed = Join-Path $installPath $relative
+            if (!(Test-Path -LiteralPath $installed)) { throw "Missing installed file: $relative" }
+            if ((Get-FileHash -LiteralPath $file.FullName).Hash -ne (Get-FileHash -LiteralPath $installed).Hash) { throw "Installed file differs: $relative" }
+          }
+          $assets = Get-ChildItem release -File | Where-Object Extension -in '.zip', '.exe' | Sort-Object Name
+          if ($assets.Count -ne 3) { throw 'Expected installer, portable ZIP and source ZIP' }
+          $lines = $assets | ForEach-Object { (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() + '  ' + $_.Name }
+          $lines | Set-Content release/SHA256SUMS.txt -Encoding utf8NoBOM
+      - name: Publish new release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_COMMIT: ${{ github.sha }}
+        run: |
+          gh release create v2.1.0 release/EXAFS_Wavelet_Studio_2.1.0_Setup.exe release/EXAFS_Wavelet_Studio_2.1.0_Windows.zip release/EXAFS_Wavelet_Studio_2.1.0_Source.zip release/SHA256SUMS.txt --target $env:RELEASE_COMMIT --title 'v2.1.0 — Illustrated Athena tutorial / 图文教程' --notes-file docs/RELEASE_v2.1.0.md --latest
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed; existing releases are not overwritten' }
