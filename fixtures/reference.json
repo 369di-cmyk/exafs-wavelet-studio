@@ -1,0 +1,12 @@
+{
+  "description": "Prior interactive original Hama run, synthetic input only",
+  "kmin": 0,
+  "kmax": 15,
+  "rmin": 0,
+  "rmax": 5,
+  "weight": 2,
+  "wavelet": "Morlet",
+  "kappa": 15,
+  "sigma": 1,
+  "source_result_sha256": "9524163380f0df80c4f1fdb89e27f7cdfc3be025dbdf5c5b08641be5de206f4b"
+}
